@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { SafeAreaView, View, TextInput, Button, StyleSheet, Text, FlatList, TouchableOpacity } from 'react-native';
-import { ScrollView } from 'react-native-virtualized-view';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, View, ScrollView, TextInput, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faPenToSquare, faGraduationCap } from '@fortawesome/free-solid-svg-icons';
+import { faPenToSquare, faBuilding } from '@fortawesome/free-solid-svg-icons';
 
 const Createdata = () => {
-    const jsonUrl = 'http://192.168.100.39:3000/mahasiswa';
-    const [first_name, setFirstName] = useState('');
-    const [last_name, setLastName] = useState('');
-    const [kelas, setKelas] = useState('');
-    const [gender, setGender] = useState('');
-    const [email, setEmail] = useState('');
+    const jsonUrl = 'http://192.168.100.13:3000/museum';
+    const [Museum, setNamaMuseum] = useState('');
+    const [Hari, setHariBuka] = useState('');
+    const [Jam, setJamBuka] = useState('');
+    const [Harga, setHargaTiket] = useState('');
+    const [Rating, setRating] = useState('');
 
-    const [selectedUser, setSelectedUser] = useState({});
+    const [selectedUser, setSelectedUser] = useState(null); // Untuk menyimpan user yang dipilih
     const [isLoading, setLoading] = useState(true);
     const [dataUser, setDataUser] = useState([]);
     const [refresh, setRefresh] = useState(false);
@@ -38,79 +37,112 @@ const Createdata = () => {
 
     const selectItem = (item) => {
         setSelectedUser(item);
-        setFirstName(item.first_name);
-        setLastName(item.last_name);
-        setKelas(item.kelas);
-        setGender(item.gender);
-        setEmail(item.email);
+        setNamaMuseum(item["Museum"]);
+        setHariBuka(item["Hari"]);
+        setJamBuka(item["Jam"]);
+        setHargaTiket(item["Harga"]);
+        setRating(item["Rating"]);
+    };
+
+    // Fungsi untuk memformat harga tiket dengan simbol "Rp"
+    const handleHargaChange = (value) => {
+        const formattedValue = value.replace(/[^0-9Rp]/g, ''); // Menghapus karakter selain angka dan "Rp"
+        if (formattedValue.startsWith('Rp')) {
+            setHargaTiket(formattedValue); // Simpan nilai yang sudah diformat
+        } else {
+            setHargaTiket('Rp' + formattedValue); // Tambahkan simbol Rp jika belum ada
+        }
     };
 
     const submit = () => {
-        const data = { first_name, last_name, email, kelas, gender };
-        fetch(`http://192.168.100.39:3000/mahasiswa/${selectedUser.id}`, {
+        if (!selectedUser) {
+            alert("Silakan pilih data museum terlebih dahulu untuk diedit!");
+            return;
+        }
+
+        const data = {
+            Museum: String(Museum),
+            Hari: String(Hari),
+            Jam: String(Jam),
+            Harga: Harga.replace('Rp', '').replace('.', ''), // Menghapus simbol "Rp" dan titik sebelum disimpan
+            Rating: parseFloat(Rating),
+        };
+
+        // Mengirim data untuk update
+        fetch(`http://192.168.100.13:3000/museum/${selectedUser.id}`, {
             method: 'PATCH',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(data),
         })
             .then((response) => response.json())
-            .then(() => {
-                alert('Data tersimpan');
-                setFirstName('');
-                setLastName('');
-                setKelas('');
-                setGender('');
-                setEmail('');
-                refreshPage();
+            .then((json) => {
+                console.log('Response from server:', json);
+                alert('Data updated');
+                setNamaMuseum('');
+                setHariBuka('');
+                setJamBuka('');
+                setHargaTiket('');
+                setRating('');
+                setSelectedUser(null); // Reset form after successful update
+                refreshPage(); // Refresh the data list after editing
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('Gagal memperbarui data');
             });
     };
 
     return (
         <SafeAreaView>
-            <View>
-                {isLoading ? (
-                    <View style={{ alignItems: 'center', marginTop: 20 }}>
-                        <Text style={styles.cardtitle}>Loading...</Text>
-                    </View>
-                ) : (
-                    <View>
-                        <Text style={styles.title}>Edit Data Mahasiswa</Text>
-                        <View style={styles.form}>
-                            <TextInput style={styles.input} placeholder="Nama Depan" value={first_name} onChangeText={setFirstName} />
-                            <TextInput style={styles.input} placeholder="Nama Belakang" value={last_name} onChangeText={setLastName} />
-                            <TextInput style={styles.input} placeholder="Kelas" value={kelas} onChangeText={setKelas} />
-                            <TextInput style={styles.input} placeholder="Jenis Kelamin" value={gender} onChangeText={setGender} />
-                            <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} />
-                            <Button title="Edit" style={styles.button} onPress={submit} />
-                        </View>
-                        <ScrollView>
-                            <FlatList
-                                style={{ marginBottom: 10 }}
-                                data={dataUser}
-                                onRefresh={refreshPage}
-                                refreshing={refresh}
-                                keyExtractor={({ id }) => id.toString()}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity onPress={() => selectItem(item)}>
-                                        <View style={styles.card}>
-                                            <View style={styles.avatar}>
-                                                <FontAwesomeIcon icon={faGraduationCap} size={50} />
-                                            </View>
-                                            <View>
-                                                <Text style={styles.cardtitle}>{item.first_name} {item.last_name}</Text>
-                                                <Text>{item.kelas}</Text>
-                                                <Text>{item.gender}</Text>
-                                            </View>
-                                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'flex-end' }}>
-                                                <FontAwesomeIcon icon={faPenToSquare} size={20} />
-                                            </View>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-                            />
-                        </ScrollView>
-                    </View>
-                )}
+            <View style={styles.container}>
+                <Text style={[styles.title, { color: '#FFFFE0' }]}>Edit Data Museum</Text>
+                <ScrollView>
+                    <TextInput style={styles.input} placeholder="Museum Name" value={Museum} onChangeText={(value) => setNamaMuseum(value)} />
+                    <TextInput style={styles.input} placeholder="Opening Days" value={Hari} onChangeText={(value) => setHariBuka(value)} />
+                    <TextInput style={styles.input} placeholder="Opening Hours" value={Jam} onChangeText={(value) => setJamBuka(value)} />
+                    <TextInput 
+                        style={styles.input} 
+                        placeholder="Ticket Price (e.g. Rp10.000)" 
+                        value={Harga} 
+                        onChangeText={handleHargaChange} // Menggunakan handleHargaChange
+                    />
+                    <TextInput style={styles.input} placeholder="Rating" value={Rating} onChangeText={(value) => setRating(value)} />
+                    {/* Tombol Edit menggunakan TouchableOpacity */}
+                    <TouchableOpacity style={styles.button} onPress={submit}>
+                        <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
+                </ScrollView>
             </View>
+
+            <FlatList
+                style={{ marginBottom: 10 }}
+                data={dataUser}
+                onRefresh={refreshPage}
+                refreshing={refresh}
+                keyExtractor={({ id }) => id.toString()}
+                renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => selectItem(item)}>
+                        <View style={styles.card}>
+                            <View style={styles.avatar}>
+                                <FontAwesomeIcon icon={faBuilding} size={70} />
+                            </View>
+                            <View>
+                                <Text style={[styles.cardtitle, { color: '#FFFFE0' }]}>{item["Museum"]}</Text>
+                                <Text style={styles.cardText}>Hari Buka: {item["Hari"]}</Text>
+                                <Text style={styles.cardText}>Jam Buka: {item["Jam"]}</Text>
+                                <Text style={styles.cardText}>Harga Tiket: {item["Harga"]}</Text>
+                                <Text style={styles.cardText}>Rating: {item["Rating"]}</Text>
+                            </View>
+                            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'flex-end' }}>
+                                <FontAwesomeIcon icon={faPenToSquare} size={30} />
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                )}
+            />
         </SafeAreaView>
     );
 };
@@ -120,28 +152,64 @@ export default Createdata;
 const styles = StyleSheet.create({
     title: {
         paddingVertical: 12,
-        backgroundColor: '#333',
+        backgroundColor: '#4A6C76',
         color: 'white',
         fontSize: 20,
         fontWeight: 'bold',
         textAlign: 'center',
     },
-    form: { padding: 10, marginBottom: 20 },
-    input: { borderWidth: 1, borderColor: '#777', borderRadius: 8, padding: 8, width: '100%', marginVertical: 5 },
-    button: { marginVertical: 10 },
-    avatar: { borderRadius: 100, width: 80 },
-    cardtitle: { fontSize: 14, fontWeight: 'bold' },
+    avatar: {
+        borderRadius: 100,
+        width: 80,
+        marginRight: 10,
+    },
+    cardtitle: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#FFFFE0',
+        marginBottom: 2,
+    },
+    cardText: {
+        color: '#FFFFE0',
+        fontSize: 12,
+        marginBottom: 1,
+    },
     card: {
         flexDirection: 'row',
-        padding: 20,
+        padding: 10,
         borderRadius: 10,
-        backgroundColor: 'white',
+        backgroundColor: '#4A6C76',
         shadowColor: '#000',
         shadowOffset: { width: 1, height: 1 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.20,
         shadowRadius: 1.41,
         elevation: 2,
         marginHorizontal: 20,
-        marginVertical: 7,
+        marginVertical: 5,
+        maxHeight: 160,
+    },
+    container: {
+        paddingHorizontal: 15,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#777',
+        borderRadius: 8,
+        padding: 10,
+        width: '100%',
+        marginVertical: 5,
+    },
+    button: {
+        backgroundColor: '#000000',
+        paddingVertical: 12,
+        paddingHorizontal: 50,
+        borderRadius: 8,
+        marginVertical: 10,
+        alignItems: 'center',
+    },
+    buttonText: {
+        color: '#FFFFE0', // Warna teks tombol Edit
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });

@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import  Profile  from './App';
-import Mahasiswa from './Mahasiswa';
+import Mahasiswa from './Museum';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faUser, faUserGraduate } from '@fortawesome/free-solid-svg-icons';
 import { WebView } from 'react-native-webview';
